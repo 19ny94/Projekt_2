@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #define IN 1
 #define OUT 0
@@ -30,15 +29,15 @@ typedef struct{
 	/*cislo klastera*/
 	unsigned int* flowid;
 	/*obsah dat*/
-	int* total_bytes;
+	double* total_bytes;
 	/*IP odesilatele*/
 	int src_ip;
 	/*IP prijemce*/
 	int dst_ip;
 	/*delka toku dat*/
-	int* flow_dur;
+	double* flow_dur;
 	/*kolik paketu se poslalu/dostalo*/
-	int* packet_count;
+	double* packet_count;
 	/*prumerna delka*/
 	double* avg_int;
 	
@@ -60,9 +59,9 @@ data_z_souboru *soubor_data_ctor(){
 	return s_data;
 }
 
-int *resize(int *arr, unsigned int new_size){
+double *resize(double *arr, unsigned int new_size){
 	
-	int* new_arr = realloc(arr, new_size * sizeof(int));
+	double* new_arr = realloc(arr, new_size * sizeof(double));
 	
 	if(new_arr == NULL){
 	exit(1);
@@ -71,24 +70,32 @@ int *resize(int *arr, unsigned int new_size){
 	return new_arr;
 }
 
-int mocnina(int x, int y){
+double mocnina(int x, int y){
 
-int nove_x = x;
+double nove_x = x;
 
 for(int i = 0; i < y - 1; i++){
 	x*= nove_x;
 	}
-if(y == 0){
-x = 1;
-}
+	
+	if(y == 0){
+		return 1;
+	}
+	
+	if(y < 0){
+		/*Jedine mozne reseni jak udelat zapornou mocninu
+		 * funkce se zase vola z duvodu, protoze v tom cyklu
+		 * nemuzu jako by vzat 10 -1krat*/
+		return 1/mocnina(x, -y);
+	}
 
 	return x;
 }
 
-int int_z_stringu(char *c){
-int result = 0;
+double int_z_stringu(char *c){
+double result = 0;
 int len = strlen(c);
-c[len] = '\0';
+//c[len] = '\0';
 /*treba chci dostat int 10 z c[0] = 1, c[1] = 0
  *
  *int 1 = c[0] - '0'; 
@@ -98,10 +105,44 @@ c[len] = '\0';
  *for(int i = 0; i < strlen(c); i++)
  * int 10 = (c[i] - '0') * 10^len - 1 - i
  *
- * */
+ */
 	for(int i = 0; i < len; i++){
 	result += ((c[i] - '0') * mocnina (10, len -1 -i));
 	}
+	return result;
+}
+
+double desetina_cara(char *c){
+double result = 0; // 
+char* c1 = malloc(sizeof(c)); //
+int len = strlen(c);
+int cara = 0;
+
+	//
+	for(int i = 0; i < len; i ++){
+		if(c[i] == '.'){
+		cara = i;
+		}
+	}
+
+	if(cara == 0){
+	for(int i = 0; i < len; i++){
+		result += c[len - i] * mocnina(10, -len +1 +i);
+		}
+	}
+
+		//
+	if(cara != 0){
+		for(int i = cara; c[i] != '\0'; i++){
+		c1[i-cara] = c[i + 1];
+		}
+		c1[len - cara -1] = '\0';
+
+		for(int i = 0; c1[i] != '\0'; i++){
+		result += ((c1[i] - '0') * mocnina(10, -1 -i));
+		}
+	}
+
 	return result;
 }
 
@@ -173,12 +214,12 @@ int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		}
 	}
 
-	sou_data->flowid=resize(sou_data->flowid, sou_data->count);
+	sou_data->flowid=realloc(sou_data->flowid, sizeof(int) * sou_data->count);
 	sou_data->total_bytes=resize(sou_data->total_bytes,sou_data->count);
 	sou_data->flow_dur=resize(sou_data->flow_dur,sou_data->count);
 	sou_data->packet_count=resize(sou_data->packet_count, sou_data->count);
 
-	sou_data->avg_int=resize(sou_data->flowid, sou_data->count);
+	sou_data->avg_int=resize(sou_data->avg_int, sou_data->count);
 	
 	char *c = malloc(sizeof(char));
 
@@ -232,7 +273,7 @@ int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		if(stav == IN && slovo == 7){
 		c = realloc(c, sizeof(char) + i + 1);
 		c[i] = g;
-		sou_data->avg_int[radek] = int_z_stringu(c);
+		sou_data->avg_int[radek] = desetina_cara(c);
 		i++;
 		}
 
@@ -248,19 +289,19 @@ int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 	}
 	printf("\nTotal_bytes: ");
 	for(int j = 0; j < sou_data->count; j++){
-	printf("%d ", sou_data->total_bytes[j]);
+	printf("%.0f ", sou_data->total_bytes[j]);
 	}
 	printf("\nFlow_duration: ");
 	for(int j = 0; j < sou_data->count; j++){
-	printf("%d ", sou_data->flow_dur[j]);
+	printf("%.0f ", sou_data->flow_dur[j]);
 	}
 	printf("\nPacket_count: ");
 	for(int j = 0; j < sou_data->count; j++){
-	printf("%d ", sou_data->packet_count[j]);
+	printf("%.0f ", sou_data->packet_count[j]);
 	}
-	printf("\nPacket_count: ");
+	printf("\nAvg_int: ");
 	for(int j = 0; j < sou_data->count; j++){
-	printf("%d ", sou_data->avg_int[j]);
+	printf("%.2f ", sou_data->avg_int[j]);
 	}
 
 	printf("\n");
