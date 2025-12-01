@@ -92,10 +92,17 @@ for(int i = 0; i < y - 1; i++){
 	return x;
 }
 
-double int_z_stringu(char *c){
+double double_z_stringu(char *c){
+
 double result = 0;
 int len = strlen(c);
-//c[len] = '\0';
+/*jsou to dva pole, prvni ulozi cisla pred carou
+ * druha ulozi po care, rozdil v tom,
+ * ze cast po care budu mocnit na zapornou*/	
+char *pred_carou = malloc(len + 1);
+char *po_care = malloc(len + 1);
+int pozice_cary = 0;
+
 /*treba chci dostat int 10 z c[0] = 1, c[1] = 0
  *
  *int 1 = c[0] - '0'; 
@@ -104,45 +111,37 @@ int len = strlen(c);
  *int 10 = 1 * 10 + 0 * 1;
  *for(int i = 0; i < strlen(c); i++)
  * int 10 = (c[i] - '0') * 10^len - 1 - i
- *
  */
 	for(int i = 0; i < len; i++){
-	result += ((c[i] - '0') * mocnina (10, len -1 -i));
-	}
-	return result;
-}
-
-double desetina_cara(char *c){
-double result = 0; // 
-char* c1 = malloc(sizeof(c)); //
-int len = strlen(c);
-int cara = 0;
-
-	//
-	for(int i = 0; i < len; i ++){
 		if(c[i] == '.'){
-		cara = i;
+		pozice_cary = i;
 		}
 	}
-
-	if(cara == 0){
+	
+	if(pozice_cary == 0){
 	for(int i = 0; i < len; i++){
-		result += c[len - i] * mocnina(10, -len +1 +i);
+		result += ((c[i] - '0') * mocnina (10, len -1 -i));
 		}
 	}
-
-		//
-	if(cara != 0){
-		for(int i = cara; c[i] != '\0'; i++){
-		c1[i-cara] = c[i + 1];
+	
+	if(pozice_cary != 0){
+	for(int i = pozice_cary; c[i] != '\0'; i++){
+		po_care[i - pozice_cary] = c[i + 1];
 		}
-		c1[len - cara -1] = '\0';
+	for(int i = 0; i < pozice_cary; i++){
+		pred_carou[i] = c[i];
+		}
 
-		for(int i = 0; c1[i] != '\0'; i++){
-		result += ((c1[i] - '0') * mocnina(10, -1 -i));
+		pred_carou[pozice_cary] = '\0';
+		po_care[len - pozice_cary - 1] = '\0';
+int len1 = strlen(pred_carou);
+	for(int i = 0; po_care[i] != '\0'; i++){
+		result += ((po_care[i] - '0') * mocnina(10, -1 -i));
+		}
+	for(int i = 0; pred_carou[i] != '\0'; i++){
+		result += ((pred_carou[i] - '0') * mocnina(10,len1 -1 -i));
 		}
 	}
-
 	return result;
 }
 
@@ -183,6 +182,13 @@ int nacitani_nazvu_souboru(int argc, char** argv, vstupni_data *data){
 	return 1;
 }
 
+/*int nacitani_argumentu(int argc, char** argv, vstupni_data *data){
+
+	data->N = atoi(argv[2]);
+	printf("N:%d\n", data->N);
+	data->WB = argv[3]);
+	printf("WB: %lf\n", data->WB);
+}*/
 
 int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 
@@ -245,35 +251,35 @@ int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		if(stav == IN && slovo == 1){
 		c = realloc(c, sizeof(char) +i +1);
 		c[i] = g;
-		sou_data->flowid[radek] = int_z_stringu(c);
+		sou_data->flowid[radek] = double_z_stringu(c);
 		i++;
 		}
 		
 		if(stav == IN && slovo == 4){
 		c = realloc(c, sizeof(char) + i + 1);
 		c[i] = g;
-		sou_data->total_bytes[radek] = int_z_stringu(c);
+		sou_data->total_bytes[radek] = double_z_stringu(c);
 		i++;
 		}
 		
 		if(stav == IN && slovo == 5){
 		c = realloc(c, sizeof(char) + i + 1);
 		c[i] = g;
-		sou_data->flow_dur[radek] = int_z_stringu(c);
+		sou_data->flow_dur[radek] = double_z_stringu(c);
 		i++;
 		}
 	
 		if(stav == IN && slovo == 6){
 		c = realloc(c, sizeof(char) + i + 1);
 		c[i] = g;
-		sou_data->packet_count[radek] = int_z_stringu(c);
+		sou_data->packet_count[radek] = double_z_stringu(c);
 		i++;
 		}
 
 		if(stav == IN && slovo == 7){
 		c = realloc(c, sizeof(char) + i + 1);
 		c[i] = g;
-		sou_data->avg_int[radek] = desetina_cara(c);
+		sou_data->avg_int[radek] = double_z_stringu(c);
 		i++;
 		}
 
@@ -322,6 +328,8 @@ int main(int argc, char** argv){
 	data_z_souboru *sou_data = soubor_data_ctor();
 
 	nacitani_nazvu_souboru(argc,argv,data);
+
+	/*nacitani_argumentu(argc,argv,data);*/
 
 	nacitani_vstupnich_dat(data, sou_data);
 
