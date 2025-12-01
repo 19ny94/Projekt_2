@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define IN 1
-#define OUT 0
+#define IN 1 /*stav slova = pozice indexu je na slove*/
+#define OUT 0 /*stav slova = pozice indexu je mimo slova*/
 
 typedef struct{
 
@@ -12,13 +12,13 @@ typedef struct{
 	/*pozadovanz pocet vzslednych shl*/	
 	unsigned int N;
 	/*Vaha pro total_bytes*/
-	unsigned int WB;
+	double WB;
 	/*Vaha pro flow_duration*/
-	unsigned int WT;
+	double WT;
 	/*vaha pro avg_interarrival_time*/
-	unsigned int WD;
+	double WD;
 	/*vaha pro prumernou delku paketu*/
-	unsigned int WS;
+	double WS;
 
 } vstupni_data;
 
@@ -64,6 +64,7 @@ double *resize(double *arr, unsigned int new_size){
 	double* new_arr = realloc(arr, new_size * sizeof(double));
 	
 	if(new_arr == NULL){
+	free(new_arr);
 	exit(1);
 	}
 
@@ -112,18 +113,19 @@ int pozice_cary = 0;
  *for(int i = 0; i < strlen(c); i++)
  * int 10 = (c[i] - '0') * 10^len - 1 - i
  */
+	/*hleda se cara*/
 	for(int i = 0; i < len; i++){
 		if(c[i] == '.'){
 		pozice_cary = i;
 		}
 	}
-	
+	/*pokud neni - provede se bezne pretypovani*/
 	if(pozice_cary == 0){
 	for(int i = 0; i < len; i++){
 		result += ((c[i] - '0') * mocnina (10, len -1 -i));
 		}
 	}
-	
+	/*do "po_care" se zapisou desetinna cisla, do "pred_carou" - cela*/	
 	if(pozice_cary != 0){
 	for(int i = pozice_cary; c[i] != '\0'; i++){
 		po_care[i - pozice_cary] = c[i + 1];
@@ -135,13 +137,17 @@ int pozice_cary = 0;
 		pred_carou[pozice_cary] = '\0';
 		po_care[len - pozice_cary - 1] = '\0';
 int len1 = strlen(pred_carou);
+		/*v podstate to stejny ale zaporna mocnina*/
 	for(int i = 0; po_care[i] != '\0'; i++){
 		result += ((po_care[i] - '0') * mocnina(10, -1 -i));
 		}
+		/*bezne pretypovani*/
 	for(int i = 0; pred_carou[i] != '\0'; i++){
 		result += ((pred_carou[i] - '0') * mocnina(10,len1 -1 -i));
 		}
 	}
+	free(pred_carou);
+	free(po_care);
 	return result;
 }
 
@@ -171,26 +177,48 @@ int nacitani_nazvu_souboru(int argc, char** argv, vstupni_data *data){
 		/*dalo by se mozna udelat pres
 		 * strcpy, ale mozna tenhle zpusob bezpecnejsi*/
 		for(int i = 0; argv[1][i] != '\0'; i++){
-		data->soubor = realloc(data->soubor, sizeof(char)+1);
+		data->soubor = realloc(data->soubor, sizeof(char) +i +1);
 		data->soubor[i] = argv[1][i];
 		}
+		data->soubor[strlen(argv[1])] = '\0';
 	}else{
 	printf("Argumenty nejsou zadane\n");
 	/*exit(1) pro me je zpusob ukonceni programu bez segmt. fault*/
+	free(data->soubor);
 	exit(1);
 	}
 	return 1;
 }
 
-/*int nacitani_argumentu(int argc, char** argv, vstupni_data *data){
+void nacitani_argumentu(char** argv, vstupni_data *data){
 
+double *pole_pro_kontrolu[4] = {&data->WB, &data->WD, &data->WD, &data->WS};
 	data->N = atoi(argv[2]);
-	printf("N:%d\n", data->N);
-	data->WB = argv[3]);
-	printf("WB: %lf\n", data->WB);
-}*/
+	data->WB = atoi(argv[3]);
+	data->WT = atoi(argv[4]);
+	data->WD = atoi(argv[5]);
+	data->WS = atoi(argv[6]);
+		
+	for(int i = 0; i < 4; i++){
+		if(*pole_pro_kontrolu[i] < 0){
+		printf("Argumenty jsou realna nezaporna cisla\n");
+		exit(1);
+			}
+		else{
+		printf("%.1lf ", *pole_pro_kontrolu[i]);
+		}
+	}
+}
 
-int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
+void nacitani_jednotlyvych_dat(char**c, int*i, int g, int radek, double*arr){
+	*c = realloc(*c, sizeof(char) +(*i) + 1);
+	(*c)[*i] = g;
+	(*i)++;
+	(*c)[*i] = '\0';
+	arr[radek] = double_z_stringu(*c);
+}
+
+void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 
 	FILE *soubor;
 
@@ -233,14 +261,15 @@ int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 	int slovo = 0;
 	int i = 0;
 	int g = 0;
-	int result = 0;
 	int radek = 0;
+	printf("\n");/*PAK ODSTANIT*/
 	while((g = fgetc(soubor)) != EOF){
 	putchar(g);/*PAK ODSTANIT*/
 		
 		if(g == ' ' || g == '\t' || g == '\n'){
 		stav = OUT;
 		i = 0;
+		free(c);
 		c = malloc(sizeof(char));
 		}
 		else if(stav == OUT){
@@ -249,38 +278,24 @@ int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		}
 
 		if(stav == IN && slovo == 1){
-		c = realloc(c, sizeof(char) +i +1);
+		c = realloc(c, sizeof(char) +i + 1);
 		c[i] = g;
-		sou_data->flowid[radek] = double_z_stringu(c);
 		i++;
+		c[i] = '\0';
+		sou_data->flowid[radek] = double_z_stringu(c);
 		}
 		
 		if(stav == IN && slovo == 4){
-		c = realloc(c, sizeof(char) + i + 1);
-		c[i] = g;
-		sou_data->total_bytes[radek] = double_z_stringu(c);
-		i++;
+nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->total_bytes);
 		}
-		
 		if(stav == IN && slovo == 5){
-		c = realloc(c, sizeof(char) + i + 1);
-		c[i] = g;
-		sou_data->flow_dur[radek] = double_z_stringu(c);
-		i++;
+nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->flow_dur);
 		}
-	
 		if(stav == IN && slovo == 6){
-		c = realloc(c, sizeof(char) + i + 1);
-		c[i] = g;
-		sou_data->packet_count[radek] = double_z_stringu(c);
-		i++;
+nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->packet_count);
 		}
-
 		if(stav == IN && slovo == 7){
-		c = realloc(c, sizeof(char) + i + 1);
-		c[i] = g;
-		sou_data->avg_int[radek] = double_z_stringu(c);
-		i++;
+nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->avg_int);
 		}
 
 		if(g == '\n'){
@@ -288,7 +303,7 @@ int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		radek++;
 		}
 	}
-
+	/*PAK ODSTANIT*/
 	printf("\nFlowid: ");
 	for(int j = 0; j < sou_data->count; j++){
 	printf("%d ", sou_data->flowid[j]);
@@ -309,7 +324,7 @@ int nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 	for(int j = 0; j < sou_data->count; j++){
 	printf("%.2f ", sou_data->avg_int[j]);
 	}
-
+	free(c);
 	printf("\n");
 	fclose(soubor);
 }
@@ -320,6 +335,14 @@ void data_dtor(vstupni_data *data){
 	free(data);
 }
 
+void soubor_data_dtor(data_z_souboru *sou_data){
+free(sou_data->flowid);
+free(sou_data->total_bytes);
+free(sou_data->flow_dur);
+free(sou_data->packet_count);
+free(sou_data->avg_int);
+free(sou_data);
+}
 
 int main(int argc, char** argv){
 
@@ -328,14 +351,14 @@ int main(int argc, char** argv){
 	data_z_souboru *sou_data = soubor_data_ctor();
 
 	nacitani_nazvu_souboru(argc,argv,data);
-
-	/*nacitani_argumentu(argc,argv,data);*/
+	
+	nacitani_argumentu(argv,data);
 
 	nacitani_vstupnich_dat(data, sou_data);
 
 	data_dtor(data);
+	soubor_data_dtor(sou_data);
 
 	return 0; 
 }
-
 
