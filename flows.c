@@ -26,7 +26,7 @@ typedef struct{
 typedef struct{
 
 	/*pocet toku*/
-	unsigned int count; /*zda se, ze pocet toku byt zaponym nemuze*/
+	unsigned int count;
 	/*cislo klastera*/
 	unsigned int* flowid;
 	/*obsah dat(total_bytes)*/
@@ -43,6 +43,8 @@ typedef struct{
 } data_z_souboru;
 
 typedef struct{
+	/*V jednotlyvem clusteru se muze nachazet vice toku
+	 * ruzych poctu. Treba cluster 10 12 obsahuje flows[2]*/ 
 	unsigned int* flows;
 	int pocet;
 
@@ -53,15 +55,13 @@ typedef struct{
 	int size;
 } Clusters;
 
+	/*podminka pro usporadani*/
+int compare(const void *a, const void *b){
 
+int x = *(int*)a;
+int y = *(int*)b;
 
-Flows *flows_ctor(){
-
-	Flows *f=malloc(sizeof(Flows));
-	f->flows = NULL;
-	f->pocet = 0;
-
-	return f;
+	return x - y;
 }
 
 Clusters *clusters_ctor(){
@@ -113,10 +113,10 @@ int pozice_cary = -1;
 
 /*treba chci dostat int 10 z c[0] = 1, c[1] = 0
  *
- *int 1 = c[0] - '0'; 
- *int 0 = c[1] - '0';
+ *int 0 = c[0] - '0'; 
+ *int 1 = c[1] - '0';
  *
- *int 10 = 1 * 10 + 0 * 1;
+ *int 10 = 1 * 10^1 + 0 * 10^0;
  *for(int i = 0; i < strlen(c); i++)
  * int 10 = (c[i] - '0') * 10^len - 1 - i
  */
@@ -139,9 +139,9 @@ int pozice_cary = -1;
 	result += ((c[i] - '0') * pow(10, pozice_cary - 1 -i));
 		}
 
-	/*v podstate to stejny ale zaporna mocnina*/
-	for(int i = pozice_cary; i < len; i++){
-	result += ((c[i] - '0') * pow(10, -1 -i));
+	/*v podstate to stejny ale zaporna mocnina, slouzi pro desetinna cisla*/
+	for(int i = pozice_cary + 1; i < len; i++){
+	result += ((c[i] - '0') * pow(10, -(i - pozice_cary)));
 		}
 	}
 	return result;
@@ -157,19 +157,19 @@ vstupni_data *data_ctor(){
 	}
 
 	data->soubor = NULL;
-	data->WB = 0;
-	data->WT = 0;
-	data->WD = 0;
-	data->WS = 0;
+	data->WB = 1;
+	data->WT = 1;
+	data->WD = 1;
+	data->WS = 1;
 
 	return data;
 }
 
 /*prvni argument pri spusteni programu - nazev souboru s daty*/
-int nacitani_nazvu_souboru(int argc, char** argv, vstupni_data *data){
+int nacitani_nazvu_souboru(int argc, char** argv, vstupni_data *data, data_z_souboru *s_data){
 
 	
-	if(argc >= 2){
+	if(argc > 1){
 		/*dalo by se mozna udelat pres
 		 * strcpy, ale mozna tenhle zpusob bezpecnejsi*/
 		for(int i = 0; argv[1][i] != '\0'; i++){
@@ -178,7 +178,7 @@ int nacitani_nazvu_souboru(int argc, char** argv, vstupni_data *data){
 		}
 		data->soubor[strlen(argv[1])] = '\0';
 	}else{
-	printf("Argumenty nejsou zadane\n");
+	printf("Argumenty nejsou zadane(zejmena nazev souboru)\n");
 	/*exit(1) pro me je zpusob ukonceni programu bez segmt. fault*/
 	free(data->soubor);
 	exit(1);
@@ -186,14 +186,24 @@ int nacitani_nazvu_souboru(int argc, char** argv, vstupni_data *data){
 	return 1;
 }
 
-void nacitani_argumentu(char** argv, vstupni_data *data){
+void nacitani_argumentu(int argc, char** argv, vstupni_data *data){
 
 double *pole_pro_kontrolu[4] = {&data->WB, &data->WT, &data->WD, &data->WS};
+	if(argc > 2){
 	data->N = atoi(argv[2]);
+	}
+	if(argc > 3){
 	data->WB = atoi(argv[3]);
+	}
+	if(argc > 4){
 	data->WT = atoi(argv[4]);
+	}
+	if(argc > 5){
 	data->WD = atoi(argv[5]);
+	}
+	if(argc > 6){
 	data->WS = atoi(argv[6]);
+	}
 		
 	for(int i = 0; i < 4; i++){
 		if(*pole_pro_kontrolu[i] < 0){
@@ -202,7 +212,9 @@ double *pole_pro_kontrolu[4] = {&data->WB, &data->WT, &data->WD, &data->WS};
 			}
 	}
 }
-
+/*muze se zdat, ze je to nejaka kouzelna prace s ukazateli, ale slouzi pouze pro
+ * prehlednost. Vzal jsem jenom kus kodu, ktery btw tam zustal pro flowid, 
+ * a dal jsem ukazateli na promenne, ktere se pri behu meni*/
 void nacitani_jednotlyvych_dat(char**c, int*i, int g, int radek, double*arr){
 	*c = realloc(*c, sizeof(char) +(*i) + 1);
 	(*c)[*i] = g;
@@ -239,12 +251,12 @@ void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		}
 	}
 
-	sou_data->flowid=realloc(sou_data->flowid, sizeof(int) * sou_data->count);
-	sou_data->total_b=resize(sou_data->total_b,sou_data->count);
-	sou_data->flow_dur=resize(sou_data->flow_dur,sou_data->count);
-	sou_data->pac_c=resize(sou_data->pac_c, sou_data->count);
-	sou_data->d_avg=resize(sou_data->d_avg, sou_data->count);
-	sou_data->s_avg=resize(sou_data->s_avg, sou_data->count);
+	sou_data->flowid=calloc(sou_data->count, sizeof(unsigned int));
+	sou_data->total_b=calloc(sou_data->count, sizeof(double));
+	sou_data->flow_dur=calloc(sou_data->count, sizeof(double));
+	sou_data->pac_c=calloc(sou_data->count, sizeof(double));
+	sou_data->d_avg=calloc(sou_data->count, sizeof(double));
+	sou_data->s_avg=calloc(sou_data->count, sizeof(double));
 
 	char *c = malloc(sizeof(char));
 
@@ -271,21 +283,22 @@ void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		c[i] = g;
 		i++;
 		c[i] = '\0';
-		sou_data->flowid[radek] = double_z_stringu(c);
+		sou_data->flowid[radek] = (unsigned int)double_z_stringu(c);
 		}
-		
+
 		if(stav == IN && slovo == 4){
-nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->total_b);
+	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->total_b);
 		}
 		if(stav == IN && slovo == 5){
-nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->flow_dur);
+	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->flow_dur);
 		}
 		if(stav == IN && slovo == 6){
-nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->pac_c);
+	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->pac_c);
 		}
 		if(stav == IN && slovo == 7){
-nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->d_avg);
+	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->d_avg);
 		}
+
 
 		if(g == '\n'){
 		slovo = 0;
@@ -293,9 +306,20 @@ nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->d_avg);
 		}
 	}
 
+	/*mozna da se najit chytrejsi reseni*/
+	/*Controla, ze packet_count <D-z>*/
+for(unsigned int i = 0; i < sou_data->count; i++){
+	if(sou_data->pac_c[i] != 0){
+	sou_data->s_avg[i] = sou_data->total_b[i]/sou_data->pac_c[i];
+	}
+	else{
+	printf("Pozor!\nPacket_count != 0\n");
+	exit(1);
+		}
+	}
 	free(c);
 	fclose(soubor);
-}
+	}
 
 /*data kaput*/
 void data_dtor(vstupni_data *data){
@@ -313,6 +337,9 @@ free(sou_data->s_avg);
 free(sou_data);
 }
 
+
+/*Jelikoz funkce dist pracuje s indexy, a struktura clusteru predava
+ * flowid, tak najdu ten flowid a vratim index.*/
 int pokud_je_prvkem(data_z_souboru *s_data, unsigned potencialni_flowid){
 	
 	for(int i = 0; i < s_data->count; i++){
@@ -326,7 +353,7 @@ int pokud_je_prvkem(data_z_souboru *s_data, unsigned potencialni_flowid){
 double dist(vstupni_data *data, data_z_souboru *s_data, int A, int B){
 
 double result = 0;
-
+			/*Euklidovsta vzdalenost*/
 	result += sqrt(data->WB * pow(s_data->total_b[A] - s_data->total_b[B], 2)+
 		       data->WT * pow(s_data->flow_dur[A] - s_data->flow_dur[B],2)+
 		       data->WD * pow(s_data->d_avg[A] - s_data->d_avg[B], 2)+
@@ -347,7 +374,8 @@ void inicializace_pole_clusteru(Clusters *c, data_z_souboru *s_data){
 }
 
 void hledani_minima(Clusters *c, data_z_souboru *s_data, vstupni_data *data, int *idx_A, int *idx_B){
-	
+
+/*dodelat*/
 double min = 999999999;
 int d = 0;
 
@@ -355,8 +383,10 @@ int d = 0;
 		for(int j = i + 1; j < c->size; j++){
 
 			for(int a = 0; a < c->data[i].pocet; a++){
+		/**/
 		int x = pokud_je_prvkem(s_data, c->data[i].flows[a]);	
 				for(int b = 0; b < c->data[j].pocet; b++){
+		/**/			
 		int y = pokud_je_prvkem(s_data, c->data[j].flows[b]);
 
 		if(x == -1 || y == -1){
@@ -365,9 +395,11 @@ int d = 0;
 		}
 		
 			d = dist(data, s_data, x, y);
-
+			
+				/*dodelat*/
 			if(min > d){
 			min = dist(data, s_data, x, y);
+
 			*idx_A = i;
 			*idx_B = j;
 					}
@@ -383,24 +415,32 @@ void shlukovaci_analyza(Clusters *c, data_z_souboru *s_data, vstupni_data *data)
 int idx_A = 0;
 int idx_B = 0;
 
+	/*Opakuje se, pokud se nedostane do pozadovaneho poctu clusteru*/
 	while(c->size > data->N){
 	hledani_minima(c, s_data, data, &idx_A, &idx_B);
 
+	/*Stary_pocet - delka flows na indexu ind_A pred popovanim*/
 	int stary_pocet = c->data[idx_A].pocet;
+	/*Novy_pocet - delka flows, aby ten novy prvek mohla prijmout*/
 	int new_pocet = c->data[idx_A].pocet + c->data[idx_B].pocet;
 	c->data[idx_A].pocet = new_pocet;	
 	c->data[idx_A].flows = realloc(c->data[idx_A].flows, sizeof(int) * new_pocet);
 
+		/*dodelat*/
 	for(int i = 0 ; i < c->data[idx_B].pocet; i++){
 	c->data[idx_A].flows[stary_pocet + i] = c->data[idx_B].flows[i];
 	}
 
+	/*Jelikoz uz nepotrebujeme - uvolnime*/
+	free(c->data[idx_B].flows);
+	
 	/*prednaska IZP 7*/
 	for(int i = idx_B; i < c->size - 1; i++){
 	c->data[i] = c->data[i + 1];
 	}
 	c->size--;
 	}
+	
 }
 
 void print_vysledku(Clusters *c){
@@ -408,7 +448,10 @@ void print_vysledku(Clusters *c){
 	printf("Clusters: \n");
 	for(int i = 0; i < c->size; i++){
 	printf("cluster %d: ", i);
-		for(int j = 0; j < c->data[i].pocet; j++){
+		for(int j = 0; j < c->data[i].pocet; j++){	
+		
+		qsort(c->data[i].flows, c->data[i].pocet, sizeof(unsigned int), compare);
+
 		printf("%d ", c->data[i].flows[j]);
 		}
 		printf("\n");
@@ -428,14 +471,17 @@ int main(int argc, char** argv){
 
 	vstupni_data *data = data_ctor();
 	data_z_souboru *sou_data = soubor_data_ctor();
-	Flows *f = flows_ctor();
 	Clusters *c = clusters_ctor();
 
-	nacitani_nazvu_souboru(argc,argv,data);
+	nacitani_nazvu_souboru(argc,argv,data, sou_data);
 	
-	nacitani_argumentu(argv,data);
+	nacitani_argumentu(argc, argv, data);
 
 	nacitani_vstupnich_dat(data, sou_data);
+
+	if(argc < 3){
+	data->N = sou_data->count;
+	}
 
 	inicializace_pole_clusteru(c, sou_data);
 
