@@ -166,7 +166,7 @@ vstupni_data *data_ctor(){
 }
 
 /*prvni argument pri spusteni programu - nazev souboru s daty*/
-int nacitani_nazvu_souboru(int argc, char** argv, vstupni_data *data, data_z_souboru *s_data){
+int nacitani_nazvu_souboru(int argc, char** argv, vstupni_data *data){
 
 	
 	if(argc > 1){
@@ -342,7 +342,7 @@ free(sou_data);
  * flowid, tak najdu ten flowid a vratim index.*/
 int pokud_je_prvkem(data_z_souboru *s_data, unsigned potencialni_flowid){
 	
-	for(int i = 0; i < s_data->count; i++){
+	for(unsigned int i = 0; i < s_data->count; i++){
 		if(s_data->flowid[i] == potencialni_flowid){
 			return i;
 			}
@@ -366,7 +366,7 @@ void inicializace_pole_clusteru(Clusters *c, data_z_souboru *s_data){
 	c->data = malloc(sizeof(Flows) * s_data->count);
 	c->size = s_data->count;
 	
-	for(int i = 0; i < s_data->count; i++){
+	for(unsigned int i = 0; i < s_data->count; i++){
 	c->data[i].flows = malloc(sizeof(unsigned int));
 	c->data[i].flows[0] = s_data->flowid[i];
 	c->data[i].pocet = 1;
@@ -416,7 +416,7 @@ int idx_A = 0;
 int idx_B = 0;
 
 	/*Opakuje se, pokud se nedostane do pozadovaneho poctu clusteru*/
-	while(c->size > data->N){
+	while(c->size > (int)data->N){
 	hledani_minima(c, s_data, data, &idx_A, &idx_B);
 
 	/*Stary_pocet - delka flows na indexu ind_A pred popovanim*/
@@ -473,7 +473,7 @@ int main(int argc, char** argv){
 	data_z_souboru *sou_data = soubor_data_ctor();
 	Clusters *c = clusters_ctor();
 
-	nacitani_nazvu_souboru(argc,argv,data, sou_data);
+	nacitani_nazvu_souboru(argc,argv,data);
 	
 	nacitani_argumentu(argc, argv, data);
 
