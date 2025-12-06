@@ -10,7 +10,7 @@ typedef struct{
 
 	/*vstupni soubor s definici toku*/
 	char* soubor;
-	/*pozadovanz pocet vzslednych shl*/	
+	/*pozadovanz pocet vzslednych shluku*/	
 	unsigned int N;
 	/*Vaha pro total_bytes*/
 	double WB;
@@ -27,13 +27,13 @@ typedef struct{
 
 	/*pocet toku*/
 	unsigned int count;
-	/*cislo klastera*/
+	/*cislo toku*/
 	unsigned int* flowid;
 	/*obsah dat(total_bytes)*/
 	double* total_b;
 	/*delka toku dat*/
 	double* flow_dur;
-	/*kolik paketu se poslalu/dostalo*/
+	/*kolik paketu se poslalo/dostalo*/
 	double* pac_c;
 	/*prumerna delka*/
 	double* d_avg;
@@ -289,16 +289,35 @@ void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 	 * protoze neprisel jsem na to, jakzym zpusobem*/
 
 		if(stav == IN && slovo == 4){
-	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->total_b);
+		c = realloc(c, sizeof(char) +i + 1);
+		c[i] = g;
+		i++;
+		c[i] = '\0';
+		sou_data->total_b[radek] = double_z_stringu(c);
 		}
+
 		if(stav == IN && slovo == 5){
-	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->flow_dur);
+		c = realloc(c, sizeof(char) +i + 1);
+		c[i] = g;
+		i++;
+		c[i] = '\0';
+		sou_data->flow_dur[radek] = double_z_stringu(c);
 		}
+
 		if(stav == IN && slovo == 6){
-	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->pac_c);
+		c = realloc(c, sizeof(char) +i + 1);
+		c[i] = g;
+		i++;
+		c[i] = '\0';
+		sou_data->pac_c[radek] = double_z_stringu(c);
 		}
+
 		if(stav == IN && slovo == 7){
-	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->d_avg);
+		c = realloc(c, sizeof(char) +i + 1);
+		c[i] = g;
+		i++;
+		c[i] = '\0';
+		sou_data->d_avg[radek] = double_z_stringu(c);
 		}
 
 		if(g == '\n'){
@@ -307,8 +326,6 @@ void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		}
 	}
 
-	/*mozna da se najit chytrejsi reseni*/
-	/*Controla, ze packet_count <D-z>*/
 for(unsigned int i = 0; i < sou_data->count; i++){
 	if(sou_data->pac_c[i] != 0){
 	sou_data->s_avg[i] = sou_data->total_b[i]/sou_data->pac_c[i];
