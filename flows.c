@@ -63,7 +63,7 @@ int y = *(int*)b;
 
 	return x - y;
 }
-
+	/*usporadani clusteru*/
 int compare_struktur(const void *a, const void *b){
 	
 Flows *flow_a = (Flows *)a;
@@ -95,20 +95,6 @@ data_z_souboru *soubor_data_ctor(){
 
 	return s_data;
 }
-
-double *resize(double *arr, unsigned int new_size){
-	
-	double* new_arr = realloc(arr, new_size * sizeof(double));
-
-	if(new_arr == NULL){
-	free(arr);
-	exit(1);
-	}
-
-	return new_arr;
-}
-
-
 
 double double_z_stringu(char *c){
 
@@ -259,6 +245,10 @@ void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		}
 	}
 
+	/*zda se mi, ze staci pro projekt udelat pamet jednou pro 
+	 * sou_data->count prvku. Calloc jsem pouzil z duvodu,
+	 * protoze valgrind si stezoval, ze pokud alokovanou 
+	 * pamet nepouziji - zustane alokovana, ale nepouzita*/
 	sou_data->flowid=calloc(sou_data->count, sizeof(unsigned int));
 	sou_data->total_b=calloc(sou_data->count, sizeof(double));
 	sou_data->flow_dur=calloc(sou_data->count, sizeof(double));
@@ -295,17 +285,8 @@ void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		c[i] = '\0';
 		sou_data->flowid[radek] = (unsigned int)double_z_stringu(c);
 		}
-
-		/*if(stav == IN && slovo == 2){
-		c = realloc(c, sizeof(char) +i + 1);
-		c[i] = g;
-		i++;
-		c[i] = '\0';
-		sou_data->flowid[radek] = (unsigned int)double_z_stringu(c);
-		}*/
-
-
-
+	/*slovo 3 a 4 s ip prijemce a odesilatele jsem nepouzil,
+	 * protoze neprisel jsem na to, jakzym zpusobem*/
 
 		if(stav == IN && slovo == 4){
 	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->total_b);
@@ -395,18 +376,25 @@ void inicializace_pole_clusteru(Clusters *c, data_z_souboru *s_data){
 
 void hledani_minima(Clusters *c, data_z_souboru *s_data, vstupni_data *data, int *idx_A, int *idx_B){
 
-/*dodelat*/
-double min = 999999999;
+/*do minu ja pridam prvni porovnani, jelikoz kdybych
+ * zadal min = 0 -> tak porovnani nedavaji smysl
+ * v tomto pripade nebo tato distance bude nejmensi
+ * nebo se najde mensi*/
+double min = dist(data, s_data, 0, 1);
 int d = 0;
+
+	/*V te analize single linkage se pocita minimalni delka
+	 * mezi toky vsech clusteru, teda pro kazde x, ktere
+	 * nalezi X, a pro kazde y z Y, kde X a Y jsou clustery*/
 
 	for(int i = 0; i < c->size; i++){
 		for(int j = i + 1; j < c->size; j++){
 
 			for(int a = 0; a < c->data[i].pocet; a++){
-		/**/
+		/*x dostava ne cislo, ale index toku, jelikoz funkce dist pracuje s indexy*/
 		int x = pokud_je_prvkem(s_data, c->data[i].flows[a]);	
 				for(int b = 0; b < c->data[j].pocet; b++){
-		/**/			
+		/*y to stejne*/			
 		int y = pokud_je_prvkem(s_data, c->data[j].flows[b]);
 
 		if(x == -1 || y == -1){
@@ -416,8 +404,8 @@ int d = 0;
 		
 			d = dist(data, s_data, x, y);
 			
-				/*dodelat*/
 			if(min > d){
+	/*opravdu nevim proc, ale nufunguje mi to kdyt zadam min = d*/
 			min = dist(data, s_data, x, y);
 
 			*idx_A = i;
@@ -446,7 +434,7 @@ int idx_B = 0;
 	c->data[idx_A].pocet = new_pocet;	
 	c->data[idx_A].flows = realloc(c->data[idx_A].flows, sizeof(int) * new_pocet);
 
-		/*dodelat*/
+	
 	for(int i = 0 ; i < c->data[idx_B].pocet; i++){
 	c->data[idx_A].flows[stary_pocet + i] = c->data[idx_B].flows[i];
 	}
