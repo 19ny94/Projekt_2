@@ -376,12 +376,13 @@ void inicializace_pole_clusteru(Clusters *c, data_z_souboru *s_data){
 
 void hledani_minima(Clusters *c, data_z_souboru *s_data, vstupni_data *data, int *idx_A, int *idx_B){
 
-/*do minu ja pridam prvni porovnani, jelikoz kdybych
- * zadal min = 0 -> tak porovnani nedavaji smysl
- * v tomto pripade nebo tato distance bude nejmensi
- * nebo se najde mensi*/
-double min = dist(data, s_data, 0, 1);
-int d = 0;
+/*Zkousel jsem ruzne zpusoby, jak inicializovat promennu min
+ * kdyz davam min = prvni distanci, tak mi to nefunguje pro
+ * spusteni ./flows data.txt 1. Kdyz jsem jenom zacinal psat, 
+ * tak pouzival jsem proste velkou konstantu, INFINITY je to
+ * zpusobem, jak tomu aspon trosicku obejit*/
+double min = INFINITY;
+double d = 0;
 
 	/*V te analize single linkage se pocita minimalni delka
 	 * mezi toky vsech clusteru, teda pro kazde x, ktere
