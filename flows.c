@@ -320,7 +320,7 @@ for(unsigned int i = 0; i < sou_data->count; i++){
 	}
 	free(c);
 	fclose(soubor);
-	}
+}
 
 /*data kaput*/
 void data_dtor(vstupni_data *data){
@@ -404,7 +404,7 @@ int d = 0;
 		
 			d = dist(data, s_data, x, y);
 			
-			if(min > d){
+			if(d < min){
 	/*opravdu nevim proc, ale nufunguje mi to kdyt zadam min = d*/
 			min = dist(data, s_data, x, y);
 
