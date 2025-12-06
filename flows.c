@@ -64,6 +64,14 @@ int y = *(int*)b;
 	return x - y;
 }
 
+int compare_struktur(const void *a, const void *b){
+	
+Flows *flow_a = (Flows *)a;
+Flows *flow_b = (Flows *)b;
+
+	return(flow_a->flows[0] - flow_b->flows[0]);
+}
+
 Clusters *clusters_ctor(){
 
 	Clusters *c=malloc(sizeof(Clusters));
@@ -267,6 +275,8 @@ void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 	int radek = 0;
 	while((g = fgetc(soubor)) != EOF){
 		
+
+		/*Prikral poctani slov jsem vzal z knihy "The C Programming Language"*/
 		if(g == ' ' || g == '\t' || g == '\n'){
 		stav = OUT;
 		i = 0;
@@ -286,6 +296,17 @@ void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		sou_data->flowid[radek] = (unsigned int)double_z_stringu(c);
 		}
 
+		/*if(stav == IN && slovo == 2){
+		c = realloc(c, sizeof(char) +i + 1);
+		c[i] = g;
+		i++;
+		c[i] = '\0';
+		sou_data->flowid[radek] = (unsigned int)double_z_stringu(c);
+		}*/
+
+
+
+
 		if(stav == IN && slovo == 4){
 	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->total_b);
 		}
@@ -298,7 +319,6 @@ void nacitani_vstupnich_dat(vstupni_data *data, data_z_souboru *sou_data ){
 		if(stav == IN && slovo == 7){
 	nacitani_jednotlyvych_dat(&c,&i,g,radek,sou_data->d_avg);
 		}
-
 
 		if(g == '\n'){
 		slovo = 0;
@@ -447,10 +467,15 @@ void print_vysledku(Clusters *c){
 
 	printf("Clusters: \n");
 	for(int i = 0; i < c->size; i++){
+
+		/*Na zacatku se provede sortovani toku v jednotlyvych kasterach*/
+	qsort(c->data[i].flows, c->data[i].pocet, sizeof(signed int), compare);
+		/*Pak se provede sortovani clusteru po prvnimu toku, jelikoz pole uz serazene*/
+	qsort(c->data, c->size, sizeof(Flows), compare_struktur);
+
 	printf("cluster %d: ", i);
 		for(int j = 0; j < c->data[i].pocet; j++){	
 		
-		qsort(c->data[i].flows, c->data[i].pocet, sizeof(unsigned int), compare);
 
 		printf("%d ", c->data[i].flows[j]);
 		}
